@@ -120,7 +120,7 @@ private fun Remote(status: String) {
         Row(GlanceModifier.fillMaxWidth()) {
             SourceKey(R.drawable.ic_bluetooth, "BT", "pilot_ir_bluetooth", "Bluetooth", GlanceModifier.defaultWeight())
             Spacer(GlanceModifier.width(8.dp))
-            SourceKey(R.drawable.ic_radio, "FM", "pilot_ir_analog", "Radio analogowe", GlanceModifier.defaultWeight())
+            SourceKey(R.drawable.ic_vinyl, "WINYL", "pilot_ir_analog", "Winyl (analog)", GlanceModifier.defaultWeight())
             Spacer(GlanceModifier.width(8.dp))
             SourceKey(R.drawable.ic_web_radio, "NET", "pilot_ir_radio_internetowe", "Radio internetowe", GlanceModifier.defaultWeight())
         }
