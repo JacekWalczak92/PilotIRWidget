@@ -1,4 +1,4 @@
-# Pilot IR – widget Home Assistant (v5)
+# Pilot IR – widget Home Assistant (v6)
 
 Widget na ekran główny w stylu pilota, który odpala skrypty `script.pilot_ir_*` z HA.
 
@@ -24,6 +24,6 @@ Na górze widgetu pokazuje się status ostatniego kliknięcia (`…` / `✓` / `
 
 Uwagi: ruch HTTP (bez TLS) w sieci lokalnej jest dozwolony; token trzymany w SharedPreferences apki.
 
-## Diagnostyka (v5)
+## Diagnostyka (v6)
 Ekran apki pokazuje log każdego kliknięcia: stan sieci, prywatny DNS, serwery DNS, oszczędzanie danych/baterii i błąd. Przyciski: Odśwież / Kopiuj / Udostępnij / Wyczyść.
 Gdy DNS systemowy nie rozwiąże adresu, apka próbuje przez DNS-over-HTTPS (Cloudflare, potem Google).
