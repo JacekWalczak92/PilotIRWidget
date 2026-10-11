@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Pilot IR</string>
+    <string name="widget_name">Pilot IR</string>
+    <string name="widget_description">Pilot do wieży przez Home Assistant</string>
+</resources>
