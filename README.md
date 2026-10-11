@@ -1,4 +1,4 @@
-# Hi-Fi Denon – widget pilota dla Home Assistant (v7)
+# Hi-Fi Denon – widget pilota dla Home Assistant (v8)
 
 Widget na ekran główny w stylu pilota, który odpala skrypty `script.pilot_ir_*` z HA.
 
