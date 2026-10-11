@@ -101,13 +101,18 @@ private fun Remote(status: String) {
         // Górny pasek: nazwa + status + POWER
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) {
+                // „HI-FI” z rozstrzelonymi literami (wąskie spacje), pod spodem marka i status
                 Text(
-                    "PILOT IR",
-                    style = TextStyle(color = ColorProvider(TextMain), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    "H\u2009I\u2009-\u2009F\u2009I",
+                    style = TextStyle(color = ColorProvider(TextMain), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    "Denon",
+                    style = TextStyle(color = ColorProvider(TextDim), fontSize = 10.sp, fontWeight = FontWeight.Medium)
                 )
                 Text(
                     status.ifEmpty { "gotowy" },
-                    style = TextStyle(color = ColorProvider(TextDim), fontSize = 10.sp),
+                    style = TextStyle(color = ColorProvider(TextDim), fontSize = 9.sp),
                     maxLines = 1
                 )
             }

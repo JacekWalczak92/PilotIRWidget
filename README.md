@@ -1,4 +1,4 @@
-# Pilot IR – widget Home Assistant (v6)
+# Hi-Fi Denon – widget pilota dla Home Assistant (v7)
 
 Widget na ekran główny w stylu pilota, który odpala skrypty `script.pilot_ir_*` z HA.
 

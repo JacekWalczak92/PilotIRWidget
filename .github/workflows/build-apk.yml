@@ -34,16 +34,16 @@ jobs:
         run: echo "name=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk PilotIR_v${{ steps.ver.outputs.name }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk HiFiDenon_v${{ steps.ver.outputs.name }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PilotIR_v${{ steps.ver.outputs.name }}
-          path: PilotIR_v${{ steps.ver.outputs.name }}.apk
+          name: HiFiDenon_v${{ steps.ver.outputs.name }}
+          path: HiFiDenon_v${{ steps.ver.outputs.name }}.apk
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build${{ github.run_number }}
-          name: Pilot IR v${{ steps.ver.outputs.name }} (build ${{ github.run_number }})
-          files: PilotIR_v${{ steps.ver.outputs.name }}.apk
+          name: Hi-Fi Denon v${{ steps.ver.outputs.name }} (build ${{ github.run_number }})
+          files: HiFiDenon_v${{ steps.ver.outputs.name }}.apk

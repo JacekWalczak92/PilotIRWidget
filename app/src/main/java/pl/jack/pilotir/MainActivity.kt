@@ -69,7 +69,7 @@ private fun SettingsScreen() {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Pilot IR – Home Assistant", style = MaterialTheme.typography.titleLarge)
+        Text("Hi-Fi Denon – Home Assistant", style = MaterialTheme.typography.titleLarge)
         Text(
             "Token: profil HA → Bezpieczeństwo → Tokeny długoterminowe.",
             style = MaterialTheme.typography.bodySmall

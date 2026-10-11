@@ -12,8 +12,8 @@ android {
         applicationId = "pl.jack.pilotir"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "6"
+        versionCode = 7
+        versionName = "7"
     }
 
     // Stały klucz: kolejne wersje instalują się na poprzednie bez odinstalowywania.

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Pilot IR</string>
-    <string name="widget_name">Pilot IR</string>
-    <string name="widget_description">Pilot do wieży przez Home Assistant</string>
+    <string name="app_name">Hi-Fi Denon</string>
+    <string name="widget_name">Hi-Fi Denon</string>
+    <string name="widget_description">Pilot do zestawu hi-fi Denon przez Home Assistant</string>
 </resources>
