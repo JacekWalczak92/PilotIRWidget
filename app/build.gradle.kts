@@ -12,8 +12,8 @@ android {
         applicationId = "pl.jack.pilotir"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "3"
+        versionCode = 4
+        versionName = "4"
     }
 
     // Stały klucz: kolejne wersje instalują się na poprzednie bez odinstalowywania.
@@ -49,4 +49,6 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
 }

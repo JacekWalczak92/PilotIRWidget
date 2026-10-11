@@ -4,10 +4,18 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.Dns
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.dnsoverhttps.DnsOverHttps
 import java.io.IOException
-import java.net.HttpURLConnection
+import java.net.InetAddress
 import java.net.URI
-import java.net.URL
+import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 
 data class HaSettings(val url: String, val token: String)
 
@@ -46,66 +54,108 @@ object Settings {
 
 object HaClient {
 
+    // Klient tylko do zapytań DoH – łączy się po IP, więc sam nie potrzebuje DNS.
+    private val bootstrap = OkHttpClient.Builder()
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(4, TimeUnit.SECONDS)
+        .build()
+
+    private val dohResolvers: List<Pair<String, Dns>> by lazy {
+        listOf(
+            "Cloudflare DoH" to DnsOverHttps.Builder().client(bootstrap)
+                .url("https://cloudflare-dns.com/dns-query".toHttpUrl())
+                .bootstrapDnsHosts(InetAddress.getByName("1.1.1.1"), InetAddress.getByName("1.0.0.1"))
+                .build(),
+            "Google DoH" to DnsOverHttps.Builder().client(bootstrap)
+                .url("https://dns.google/dns-query".toHttpUrl())
+                .bootstrapDnsHosts(InetAddress.getByName("8.8.8.8"), InetAddress.getByName("8.8.4.4"))
+                .build()
+        )
+    }
+
+    /** Najpierw DNS systemowy, a gdy zawiedzie – DNS-over-HTTPS (jak bezpieczny DNS w Chrome). */
+    private val fallbackDns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            try {
+                return Dns.SYSTEM.lookup(hostname).also {
+                    DiagLog.add("DNS systemowy OK → ${it.joinToString { a -> a.hostAddress ?: "?" }}")
+                }
+            } catch (e: UnknownHostException) {
+                DiagLog.add("DNS systemowy BŁĄD: ${e.message}")
+            }
+            for ((name, dns) in dohResolvers) {
+                try {
+                    return dns.lookup(hostname).also {
+                        DiagLog.add("$name OK → ${it.joinToString { a -> a.hostAddress ?: "?" }}")
+                    }
+                } catch (e: Exception) {
+                    DiagLog.add("$name BŁĄD: ${e.javaClass.simpleName}: ${e.message}")
+                }
+            }
+            throw UnknownHostException("Nie można rozwiązać $hostname (system ani DoH)")
+        }
+    }
+
+    private val client = OkHttpClient.Builder()
+        .dns(fallbackDns)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .build()
+
     /** Uruchamia script.<name> przez REST API (script.turn_on — nie czeka na koniec skryptu). */
     suspend fun runScript(context: Context, script: String): Result<Unit> = withContext(Dispatchers.IO) {
-        retryNetwork {
+        Diag.snapshot(context, "widget: $script")
+        val r = retryNetwork {
             val s = Settings.load(context)
             require(s.url.isNotBlank() && s.token.isNotBlank()) { "Brak konfiguracji – otwórz apkę" }
-            val conn = open("${s.url}/api/services/script/turn_on", s.token).apply {
-                requestMethod = "POST"
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-            }
-            try {
-                conn.outputStream.use { it.write("""{"entity_id":"script.$script"}""".toByteArray()) }
-                val code = conn.responseCode
-                if (code !in 200..299) error("HTTP $code")
-            } finally {
-                conn.disconnect()
+            val req = Request.Builder()
+                .url("${s.url}/api/services/script/turn_on")
+                .header("Authorization", "Bearer ${s.token}")
+                .post("""{"entity_id":"script.$script"}""".toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) error("HTTP ${resp.code}")
             }
         }
+        DiagLog.add(r.fold({ "→ OK" }, { "→ BŁĄD ${it.javaClass.simpleName}: ${it.message}" }))
+        r
     }
 
     /** Sprawdza połączenie: GET /api/ powinno zwrócić {"message":"API running."}. */
     suspend fun test(context: Context): Result<String> = withContext(Dispatchers.IO) {
-        retryNetwork {
+        Diag.snapshot(context, "test z apki")
+        val r = retryNetwork {
             val s = Settings.load(context)
             require(s.url.isNotBlank() && s.token.isNotBlank()) { "Uzupełnij adres i token" }
-            val conn = open("${s.url}/api/", s.token)
-            try {
-                val code = conn.responseCode
-                if (code == 401) error("HTTP 401 – zły token")
-                if (code !in 200..299) error("HTTP $code")
-                conn.inputStream.bufferedReader().use { it.readText() }
-            } finally {
-                conn.disconnect()
+            DiagLog.add("URL: ${s.url}")
+            val req = Request.Builder()
+                .url("${s.url}/api/")
+                .header("Authorization", "Bearer ${s.token}")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.code == 401) error("HTTP 401 – zły token")
+                if (!resp.isSuccessful) error("HTTP ${resp.code}")
+                resp.body?.string() ?: ""
             }
         }
+        DiagLog.add(r.fold({ "→ OK: $it" }, { "→ BŁĄD ${it.javaClass.simpleName}: ${it.message}" }))
+        r
     }
 
-    /**
-     * Proces obudzony kliknięciem widgetu bywa przez chwilę odcięty od sieci
-     * (DNS: "Unable to resolve host"). Ponawiamy błędy sieciowe przez ~5 s.
-     */
+    /** Błędy sieciowe ponawiamy (proces obudzony widgetem bywa chwilę bez sieci). */
     private suspend fun <T> retryNetwork(block: () -> T): Result<T> {
         var last: Throwable? = null
-        repeat(5) { attempt ->
+        repeat(3) { attempt ->
             try {
                 return Result.success(block())
             } catch (e: IOException) {
                 last = e
-                delay(400L + 400L * attempt)
+                DiagLog.add("próba ${attempt + 1}/3: ${e.javaClass.simpleName}: ${e.message}")
+                delay(500L + 700L * attempt)
             } catch (e: Exception) {
                 return Result.failure(e)
             }
         }
         return Result.failure(last ?: IOException("Brak sieci"))
     }
-
-    private fun open(url: String, token: String) =
-        (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 4000
-            readTimeout = 6000
-            setRequestProperty("Authorization", "Bearer $token")
-        }
 }
