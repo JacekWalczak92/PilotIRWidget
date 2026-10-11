@@ -2,8 +2,11 @@ package pl.jack.pilotir
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 data class HaSettings(val url: String, val token: String)
@@ -18,9 +21,26 @@ object Settings {
 
     fun save(context: Context, url: String, token: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString("url", url.trim().trimEnd('/'))
+            .putString("url", cleanUrl(url))
             .putString("token", token.trim())
             .apply()
+    }
+
+    /** Zostawia samo https://host[:port] – usuwa spacje, sklejone adresy i ścieżki typu /lovelace. */
+    fun cleanUrl(raw: String): String {
+        var s = raw.filterNot { it.isWhitespace() }
+        val i = s.lastIndexOf("://")
+        if (i >= 0) {
+            val start = maxOf(s.lastIndexOf("http://", i), s.lastIndexOf("https://", i))
+            if (start > 0) s = s.substring(start)
+        } else if (s.isNotEmpty()) {
+            s = "https://$s"
+        }
+        return runCatching {
+            val u = URI(s)
+            val port = if (u.port > 0) ":${u.port}" else ""
+            "${u.scheme}://${u.host}$port"
+        }.getOrDefault(s.trimEnd('/'))
     }
 }
 
@@ -28,7 +48,7 @@ object HaClient {
 
     /** Uruchamia script.<name> przez REST API (script.turn_on — nie czeka na koniec skryptu). */
     suspend fun runScript(context: Context, script: String): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        retryNetwork {
             val s = Settings.load(context)
             require(s.url.isNotBlank() && s.token.isNotBlank()) { "Brak konfiguracji – otwórz apkę" }
             val conn = open("${s.url}/api/services/script/turn_on", s.token).apply {
@@ -48,7 +68,7 @@ object HaClient {
 
     /** Sprawdza połączenie: GET /api/ powinno zwrócić {"message":"API running."}. */
     suspend fun test(context: Context): Result<String> = withContext(Dispatchers.IO) {
-        runCatching {
+        retryNetwork {
             val s = Settings.load(context)
             require(s.url.isNotBlank() && s.token.isNotBlank()) { "Uzupełnij adres i token" }
             val conn = open("${s.url}/api/", s.token)
@@ -61,6 +81,25 @@ object HaClient {
                 conn.disconnect()
             }
         }
+    }
+
+    /**
+     * Proces obudzony kliknięciem widgetu bywa przez chwilę odcięty od sieci
+     * (DNS: "Unable to resolve host"). Ponawiamy błędy sieciowe przez ~5 s.
+     */
+    private suspend fun <T> retryNetwork(block: () -> T): Result<T> {
+        var last: Throwable? = null
+        repeat(5) { attempt ->
+            try {
+                return Result.success(block())
+            } catch (e: IOException) {
+                last = e
+                delay(400L + 400L * attempt)
+            } catch (e: Exception) {
+                return Result.failure(e)
+            }
+        }
+        return Result.failure(last ?: IOException("Brak sieci"))
     }
 
     private fun open(url: String, token: String) =

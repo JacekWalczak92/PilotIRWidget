@@ -95,7 +95,8 @@ private fun Remote(status: String) {
             .fillMaxSize()
             .background(ImageProvider(R.drawable.remote_body))
             .padding(14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Górny pasek: nazwa + status + POWER
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

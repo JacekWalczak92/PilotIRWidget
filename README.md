@@ -1,4 +1,4 @@
-# Pilot IR – widget Home Assistant (v2)
+# Pilot IR – widget Home Assistant (v3)
 
 Widget na ekran główny w stylu pilota, który odpala skrypty `script.pilot_ir_*` z HA.
 
